@@ -20,22 +20,24 @@ contract SubscriptionNFT is ERC721, ERC721Burnable, Ownable {
     address public provider;
 
     uint256 private _currentTokenId;
+    address private _owner;
 
     event Subscribed(address indexed subscriber, uint256 tokenId, uint256 expiration);
     event SubscriptionUpdated(uint256 newDuration, uint256 newPrice);
 
     constructor(
+        string memory _name,
+        string memory _symbol,
         address _provider,
-        string memory name,
-        string memory symbol,
         uint256 _duration,
         uint256 _price,
         address[] memory _paymentTokens
-    ) ERC721(name, symbol) Ownable(msg.sender) {
+    ) ERC721(_name, _symbol) Ownable(msg.sender) {
         provider = _provider;
         duration = _duration;
         price = _price;
         paymentTokens = _paymentTokens;
+        _owner = msg.sender;
     }
 
     function subscribe(address paymentToken) external payable {
@@ -67,7 +69,11 @@ contract SubscriptionNFT is ERC721, ERC721Burnable, Ownable {
         return false;
     }
 
-    function isExpired(uint256 tokenId) external view returns (bool) {
+    function isExpired(uint256 tokenId) external  returns (bool) {
+        if (subscriptions[tokenId].expiration < block.timestamp) {
+            _burn(tokenId);
+            return false; // Token does not exist
+        }
         return block.timestamp >= subscriptions[tokenId].expiration;
     }
 
@@ -79,13 +85,18 @@ contract SubscriptionNFT is ERC721, ERC721Burnable, Ownable {
 
         _burn(tokenId);
 
-        uint256 amount = subscriptions[tokenId].price;
         delete subscriptions[tokenId];
 
-        payable(provider).transfer(amount);
+
     }
 
     function totalSupply() public view returns (uint256) {
         return _currentTokenId;
+    }
+
+    function getSubscriptionInfo(uint256 tokenId) external view returns (SubscriptionInfo memory) {
+        require(_ownerOf(tokenId)!= address(0), "Token does not exist");
+        require(_ownerOf(tokenId) == msg.sender || msg.sender == _owner, "Not the owner of the token or this contract");
+        return subscriptions[tokenId];
     }
 }
