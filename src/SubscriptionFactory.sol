@@ -16,9 +16,9 @@ contract SubscriptionFactory {
         address[] memory paymentTokens
     ) external {
         SubscriptionNFT newSubscription = new SubscriptionNFT(
-            msg.sender,
             name,
             symbol,
+            msg.sender,
             duration,
             price,
             paymentTokens
